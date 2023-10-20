@@ -13,9 +13,6 @@ permissions:
   packages: read # packages needed to read the build container
   pull-requests: write # needed for compliance
 
-env:
-  REGISTRY: ghcr.io/hpe-cds
-
 jobs:
   build:
     runs-on: ubuntu-latest
