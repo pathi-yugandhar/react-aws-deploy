@@ -39,25 +39,37 @@ jobs:
       - name: Build
         run: npm run build --if-present
 
-      # - name: GHPages
-      #   run: npm run publish-gh-pages # will be restricted to main branch only
-
-  gh-pages:
-    needs: build
-    if: ${{ github.ref == 'refs/heads/main' }}
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
       - name: Upload artifact
+        if: ${{ github.ref == 'refs/heads/main' }}
         uses: actions/upload-pages-artifact@v2
         with:
           # Upload entire repository
           path: 'build'
+
       - name: Deploy to GitHub Pages
+        if: ${{ github.ref == 'refs/heads/main' }}
         id: deployment
         uses: actions/deploy-pages@v2
+
+      # - name: GHPages
+      #   run: npm run publish-gh-pages # will be restricted to main branch only
+
+  # gh-pages:
+  #   needs: build
+  #   if: ${{ github.ref == 'refs/heads/main' }}
+  #   environment:
+  #     name: github-pages
+  #     url: ${{ steps.deployment.outputs.page_url }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Upload artifact
+  #       uses: actions/upload-pages-artifact@v2
+  #       with:
+  #         # Upload entire repository
+  #         path: 'build'
+  #     - name: Deploy to GitHub Pages
+  #       id: deployment
+  #       uses: actions/deploy-pages@v2
 
   # docker:
   #   needs:
