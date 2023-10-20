@@ -12,6 +12,7 @@ permissions:
   id-token: write # id-token needed for hpe-hcss/github-oidc-app. This authenticates the runner to AWS ECR.
   packages: read # packages needed to read the build container
   pull-requests: write # needed for compliance
+  pages: write
 
 jobs:
   build:
