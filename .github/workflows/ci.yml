@@ -1,38 +1,95 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: CI
+name: CI-UI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ['main']
   pull_request:
-    branches: [ "main" ]
+    branches: ['main']
+
+permissions:
+  actions: read # permission to read other github actions
+  contents: write # contents needed for compliance
+  id-token: write # id-token needed for hpe-hcss/github-oidc-app. This authenticates the runner to AWS ECR.
+  packages: read # packages needed to read the build container
+  pull-requests: write # needed for compliance
+
+env:
+  REGISTRY: ghcr.io/hpe-cds
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [ 18.x]
+        node-version: [18.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        
-    - name : Install depedencies
-      run: npm ci
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
-    - name : Test
-      run: npm test
-      
-    - name : Build
-      run: npm run build --if-present
+      - name: Install depedencies
+        run: npm ci
 
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build --if-present
+
+      # - name: GHPages
+      #   run: npm run publish-gh-pages # will be restricted to main branch only
+
+  gh-pages:
+    needs: build
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          # Upload entire repository
+          path: 'build'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+  # docker:
+  #   needs:
+  #     - build
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     computed_tag: ${{ steps.tag-manage.outputs.computed_tag }}
+  #   steps:
+  #     - name: code checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #     - name: tag manage
+  #       id: tag-manage
+  #       uses: hpe-cds/reusable-workflows/.github/actions/tag-manage@main
+  #       with:
+  #         api_token_containers_repo_read_all: ${{ secrets.API_TOKEN_CONTAINERS_REPO_READ_ALL }}
+  #         api_token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v2
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Build and push
+  #       uses: docker/build-push-action@v4
+  #       with:
+  #         push: ${{ github.ref == 'refs/heads/main' }}
+  #         tags: ${{ env.REGISTRY }}/${{ github.event.repository.name }}/test-ui-workflow:${{ steps.tag-manage.outputs.computed_tag }}
+  #         target: ''
+  #         build-args: |
+  #           NODE_AUTH_TOKEN=${{ secrets.NPM_UPLOAD_CI_TOKEN }}
