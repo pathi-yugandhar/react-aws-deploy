@@ -25,6 +25,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
@@ -40,17 +41,38 @@ jobs:
       - name: Build
         run: npm run build --if-present
 
-      - name: Upload artifact
-        if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Cypress Tests
+        run: npm run cypress:run --if-present
+
+      - name: Upload Storybook
         uses: actions/upload-pages-artifact@v2
         with:
-          # Upload entire repository
           path: 'build'
+          name: 'build'
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy Storybook to GitHub Pages
         if: ${{ github.ref == 'refs/heads/main' }}
         id: deployment
         uses: actions/deploy-pages@v2
+
+  cypress-run:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download the build folder
+        uses: actions/download-artifact@v3
+        with:
+          name: build
+          path: build
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          start: npm start
+          browser: chrome
 
       # - name: GHPages
       #   run: npm run publish-gh-pages # will be restricted to main branch only
